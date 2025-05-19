@@ -4,37 +4,30 @@ from operator import itemgetter
 
 import requests
 
-
-# from : iancward/five_letter_words.py
+# from : iancward/five_letter_words.py but modified to use https://www.wordunscrambler.net/word-list/wordle-word-list
+from bs4 import BeautifulSoup
 def fetch_word_list():
     print('Fetching word list')
-    # get list of five-letter words from meaningpedia.com
-    # found it linked from Wikipedia:
-    # https://en.wikipedia.org/wiki/Lists_of_English_words#External_links
-    meaningpedia_resp = requests.get(
-        "https://meaningpedia.com/5-letter-words?show=all")
 
-    # get list of words by grabbing regex captures of response
-    # there's probably a far better way to do this by actually parsing the HTML
-    # response, but I don't know how to do that, and this gets the job done
-
-    # compile regex
-    pattern = re.compile(r'<span itemprop="name">(\w+)</span>')
-    # find all matches
-    word_list = pattern.findall(meaningpedia_resp.text)
+    # to avoid getting blocked by website
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    resp = requests.get(
+        "https://www.wordunscrambler.net/word-list/wordle-word-list",
+        headers=headers
+    )
+    
+    soup = BeautifulSoup(resp.text, 'html.parser')
+    word_list = [li.text.strip().lower() for li in soup.select('div.content li') if len(li.text.strip()) == 5]
+    
     word_counter = Counter()
-    for result in word_list:
-        word = result.lower().rstrip()
-        # print('Tabulating: {}'.format(word))
+    for word in word_list:
         for letter in set(word):
             word_counter[letter] += 1
 
-    # sort output
     sorted_letters = sorted(word_counter.items(), key=itemgetter(1), reverse=True)
     return word_list, sorted_letters
-
-
-
 # finding the word with the highest frequency of letters, no repeats
 def find_highest_freq_word(word_list, sorted_letters):
     highest_freq_word = ''
